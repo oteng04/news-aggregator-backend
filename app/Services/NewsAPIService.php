@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class NewsAPIService implements NewsSourceInterface
 {
     private string $apiKey;
-    private string $baseUrl = 'https://newsapi.org/v2';
+    private string $baseUrl;
 
     public function __construct()
     {

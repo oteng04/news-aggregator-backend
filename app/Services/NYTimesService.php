@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class NYTimesService implements NewsSourceInterface
 {
     private string $apiKey;
-    private string $baseUrl = 'https://api.nytimes.com/svc';
+    private string $baseUrl;
 
     public function __construct()
     {

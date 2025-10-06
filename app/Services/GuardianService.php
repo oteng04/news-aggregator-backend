@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class GuardianService implements NewsSourceInterface
 {
     private string $apiKey;
-    private string $baseUrl = 'https://content.guardianapis.com';
+    private string $baseUrl;
 
     public function __construct()
     {
