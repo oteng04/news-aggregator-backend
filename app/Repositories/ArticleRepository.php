@@ -63,4 +63,66 @@ class ArticleRepository implements ArticleRepositoryInterface
             ->orderBy('published_at', 'desc')
             ->get();
     }
+
+    // Additional methods that might be expected
+    public function all(): Collection
+    {
+        return $this->getAll();
+    }
+
+    public function find(int $id): ?object
+    {
+        return Article::with(['source', 'category', 'authors'])->find($id);
+    }
+
+    public function findOrFail(int $id): ?object
+    {
+        return Article::with(['source', 'category', 'authors'])->findOrFail($id);
+    }
+
+    public function create(array $data): object
+    {
+        return Article::create($data);
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        return Article::where('id', $id)->update($data) > 0;
+    }
+
+    public function delete(int $id): bool
+    {
+        return Article::destroy($id) > 0;
+    }
+
+    public function paginate(): LengthAwarePaginator
+    {
+        return $this->getPaginated();
+    }
+
+    public function getLatestArticles(array $filters = []): LengthAwarePaginator
+    {
+        $query = Article::with(['source', 'category', 'authors'])
+            ->orderBy('published_at', 'desc');
+
+        if (isset($filters['source_id'])) {
+            $query->where('source_id', $filters['source_id']);
+        }
+
+        if (isset($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        return $query->paginate(20);
+    }
+
+    public function updateOrCreate(array $attributes, array $data): object
+    {
+        return Article::updateOrCreate($attributes, $data);
+    }
+
+    public function upsert(array $values, array $uniqueBy, array $update): int
+    {
+        return Article::upsert($values, $uniqueBy, $update);
+    }
 }
