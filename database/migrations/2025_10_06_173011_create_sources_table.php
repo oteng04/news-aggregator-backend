@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('sources', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->string('api_identifier')->unique();
+            $table->boolean('enabled')->default(true);
             $table->timestamps();
+            
+            $table->index('enabled');
+            $table->index('api_identifier');
         });
     }
 
