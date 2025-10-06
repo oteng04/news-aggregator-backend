@@ -1,0 +1,65 @@
+{
+    "info": {
+      "name": "News Aggregator API",
+      "description": "API endpoints for news aggregation system",
+      "version": "1.0.0"
+    },
+    "item": [
+      {
+        "name": "Articles",
+        "item": [
+          {
+            "name": "Get All Articles",
+            "request": {
+              "method": "GET",
+              "url": "{{base_url}}/api/articles"
+            }
+          },
+          {
+            "name": "Search Articles",
+            "request": {
+              "method": "GET",
+              "url": "{{base_url}}/api/articles/search?q=technology"
+            }
+          },
+          {
+            "name": "Get Single Article",
+            "request": {
+              "method": "GET",
+              "url": "{{base_url}}/api/articles/1"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Sources",
+        "item": [
+          {
+            "name": "Get All Sources",
+            "request": {
+              "method": "GET",
+              "url": "{{base_url}}/api/sources"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Categories",
+        "item": [
+          {
+            "name": "Get All Categories",
+            "request": {
+              "method": "GET",
+              "url": "{{base_url}}/api/categories"
+            }
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "http://localhost:8000"
+      }
+    ]
+  }
