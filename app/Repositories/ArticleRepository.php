@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Article;
 use App\Repositories\Contracts\ArticleRepositoryInterface;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class ArticleRepository implements ArticleRepositoryInterface
@@ -64,7 +64,6 @@ class ArticleRepository implements ArticleRepositoryInterface
             ->get();
     }
 
-    // Additional methods that might be expected
     public function all(): Collection
     {
         return $this->getAll();
