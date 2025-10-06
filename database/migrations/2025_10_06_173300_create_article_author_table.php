@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('article_author', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('article_id')->constrained()->onDelete('cascade');
+            $table->foreignId('author_id')->constrained()->onDelete('cascade');
             $table->timestamps();
+            
+            $table->unique(['article_id', 'author_id']);
+            $table->index('article_id');
+            $table->index('author_id');
         });
     }
 
