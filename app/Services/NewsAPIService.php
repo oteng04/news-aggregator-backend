@@ -15,6 +15,7 @@ class NewsAPIService implements NewsSourceInterface
     public function __construct()
     {
         $this->apiKey = config('services.news_api.key') ?? env('NEWS_API_KEY');
+        $this->baseUrl = config('services.news_api.base_url') ?? env('NEWS_API_BASE_URL');
     }
 
     public function fetchArticles(string $category = 'general', int $page = 1): Collection

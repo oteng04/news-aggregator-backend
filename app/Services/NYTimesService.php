@@ -15,6 +15,7 @@ class NYTimesService implements NewsSourceInterface
     public function __construct()
     {
         $this->apiKey = config('services.nytimes.key') ?? env('NYT_API_KEY');
+        $this->baseUrl = config('services.nytimes.base_url') ?? env('NYTIMES_BASE_URL');
     }
 
     public function fetchArticles(string $category = 'general', int $page = 1): Collection
