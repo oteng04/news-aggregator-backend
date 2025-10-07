@@ -78,6 +78,30 @@ class ArticleAggregatorService
         );
     }
 
+    private function getOrCreateAuthor(?string $authorName): ?Author
+    {
+        if (empty($authorName)) {
+            return null;
+        }
+        
+        return Author::firstOrCreate(
+            ['name' => $authorName],
+            ['name' => $authorName]
+        );
+    }
+
+    private function getOrCreateCategory(string $categoryName): Category
+    {
+        return Category::firstOrCreate(
+            ['name' => $categoryName],
+            [
+                'name' => $categoryName,
+                'slug' => \Str::slug($categoryName),
+                'description' => "Category: {$categoryName}"
+            ]
+        );
+    }
+
     private function isDuplicate(array $articleData, Source $source): bool
     {
         $url = $this->extractUrl($articleData);
@@ -87,6 +111,9 @@ class ArticleAggregatorService
     private function createArticle(array $articleData, Source $source): ?Article
     {
         try {
+            $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
+            $category = $this->getOrCreateCategory($this->extractCategory($articleData));
+            
             $article = Article::create([
                 'title' => $this->extractTitle($articleData),
                 'slug' => $this->generateSlug($this->extractTitle($articleData)),
@@ -97,6 +124,8 @@ class ArticleAggregatorService
                 'published_at' => $this->extractPublishedAt($articleData),
                 'fetched_at' => now(),
                 'source_id' => $source->id,
+                'author_id' => $author?->id,
+                'category_id' => $category->id,
             ]);
 
             return $article;
@@ -135,6 +164,16 @@ class ArticleAggregatorService
     {
         $date = $data['publishedAt'] ?? $data['webPublicationDate'] ?? $data['pub_date'] ?? null;
         return $date ? \Carbon\Carbon::parse($date) : now();
+    }
+
+    private function extractAuthor(array $data): ?string
+    {
+        return $data['author'] ?? $data['byline'] ?? $data['byline']['original'] ?? null;
+    }
+
+    private function extractCategory(array $data): ?string
+    {
+        return $data['category'] ?? $data['pillarName'] ?? $data['section_name'] ?? 'General';
     }
 
     private function generateSlug(string $title): string
