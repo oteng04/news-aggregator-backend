@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev
 
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip
+RUN pecl install redis && docker-php-ext-enable redis
 
 WORKDIR /var/www/html
 
