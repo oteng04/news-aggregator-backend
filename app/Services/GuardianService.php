@@ -14,8 +14,8 @@ class GuardianService implements NewsSourceInterface
 
     public function __construct()
     {
-        $this->apiKey = config('services.guardian.key') ?? env('GUARDIAN_API_KEY');
-        $this->baseUrl = config('services.guardian.base_url') ?? env('GUARDIAN_BASE_URL');
+        $this->apiKey = config('news.providers.guardian.api_key') ?? env('GUARDIAN_API_KEY');
+        $this->baseUrl = config('news.providers.guardian.base_url') ?? env('GUARDIAN_BASE_URL');
     }
 
     public function fetchArticles(string $category = 'general', int $page = 1): Collection

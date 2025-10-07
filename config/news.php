@@ -4,9 +4,9 @@ return [
     'providers' => [
         'news_api' => [
             'name' => 'News API',
-            'base_url' => env('NEWS_API_BASE_URL', 'https://newsapi.org/v2'),
-            'api_key' => env('NEWS_API_KEY'),
-            'enabled' => env('NEWS_API_ENABLED', true),
+            'base_url' => env('NEWSAPI_BASE_URL', 'https://newsapi.org/v2'),
+            'api_key' => env('NEWSAPI_API_KEY'),
+            'enabled' => env('NEWSAPI_ENABLED', true),
         ],
         'guardian' => [
             'name' => 'The Guardian',
