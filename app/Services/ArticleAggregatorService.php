@@ -78,16 +78,10 @@ class ArticleAggregatorService
         );
     }
 
-    private function getOrCreateAuthor(?string $authorName): ?Author
+    private function getOrCreateAuthor(?string $authorName): Author
     {
-        if (empty($authorName)) {
-            return null;
-        }
-        
-        return Author::firstOrCreate(
-            ['name' => $authorName],
-            ['name' => $authorName]
-        );
+        $name = empty($authorName) ? 'Unknown' : $authorName;
+        return Author::firstOrCreate(['name' => $name]);
     }
 
     private function getOrCreateCategory(string $categoryName): Category
@@ -168,9 +162,9 @@ class ArticleAggregatorService
 
     private function extractAuthor(array $data): ?string
     {
-        return $data['author'] ?? $data['byline'] ?? $data['byline']['original'] ?? null;
+        return $data['author'] ?? $data['fields']['byline'] ?? $data['byline']['original'] ?? 'Unknown';
     }
-
+    
     private function extractCategory(array $data): ?string
     {
         return $data['category'] ?? $data['pillarName'] ?? $data['section_name'] ?? 'General';
