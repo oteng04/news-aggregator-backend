@@ -23,7 +23,23 @@ class ArticleResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Forms\Components\TextInput::make('title')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\Textarea::make('description')
+                    ->maxLength(65535),
+                Forms\Components\Textarea::make('content')
+                    ->maxLength(65535),
+                Forms\Components\TextInput::make('url')
+                    ->url()
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('image_url')
+                    ->url()
+                    ->maxLength(255),
+                Forms\Components\Select::make('source_id')
+                    ->relationship('source', 'name')
+                    ->required(),
             ]);
     }
 
@@ -31,12 +47,25 @@ class ArticleResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('title')
+                    ->searchable()
+                    ->sortable()
+                    ->limit(50),
+                Tables\Columns\TextColumn::make('source.name')
+                    ->label('Source')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('published_at')
+                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('fetched_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
