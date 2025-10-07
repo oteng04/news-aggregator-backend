@@ -23,7 +23,17 @@ class SourceResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Forms\Components\TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('slug')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('api_identifier')
+                    ->label('API Identifier')
+                    ->maxLength(255),
+                Forms\Components\Toggle::make('enabled')
+                    ->default(true),
             ]);
     }
 
@@ -31,7 +41,18 @@ class SourceResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('slug')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('api_identifier')
+                    ->label('API ID'),
+                Tables\Columns\IconColumn::make('enabled')
+                    ->boolean(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
                 //
