@@ -21,6 +21,7 @@ class NewsAPIService implements NewsSourceInterface
     public function fetchArticles(int $page = 1): Collection
     {
         try {
+            // Using top-headlines endpoint to get current US news headlines
             $response = Http::timeout(30)->get($this->baseUrl . '/top-headlines', [
                 'apiKey' => $this->apiKey,
                 'country' => 'us'

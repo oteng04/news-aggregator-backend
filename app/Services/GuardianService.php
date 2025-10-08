@@ -26,6 +26,7 @@ class GuardianService implements NewsSourceInterface
                 'page' => $page,
                 'page-size' => 50,
                 'order-by' => 'newest',
+                // Request specific fields we need for articles
                 'show-fields' => 'headline,trailText,body,thumbnail'
             ]);
 
