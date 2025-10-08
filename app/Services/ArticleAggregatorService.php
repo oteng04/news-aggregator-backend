@@ -78,6 +78,29 @@ class ArticleAggregatorService
         );
     }
 
+    private function getOrCreateRealSource(array $articleData, Source $fallbackSource): Source
+    {
+        // NewsAPI provides real source names in article data
+        if (isset($articleData['source']['name']) && !empty($articleData['source']['name'])) {
+            $realSourceName = $articleData['source']['name'];
+            return Source::firstOrCreate(
+                ['name' => $realSourceName],
+                [
+                    'name' => $realSourceName,
+                    'slug' => \Str::slug($realSourceName),
+                    'api_identifier' => $fallbackSource->api_identifier,
+                    'enabled' => true
+                ]
+            );
+        }
+
+        // Guardian provides sectionName which could be used, but we'll stick with service source for now
+        // NY Times doesn't provide individual source names in top stories
+
+        // Fall back to the service source
+        return $fallbackSource;
+    }
+
     private function getOrCreateAuthor(?string $authorName): Author
     {
         $name = empty($authorName) ? 'Unknown' : $authorName;
@@ -105,6 +128,8 @@ class ArticleAggregatorService
     private function createArticle(array $articleData, Source $source): ?Article
     {
         try {
+            // Use real source name from article data if available (e.g., NewsAPI provides actual source names)
+            $realSource = $this->getOrCreateRealSource($articleData, $source);
             $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
             $category = $this->getOrCreateCategory($this->extractCategory($articleData));
             
@@ -117,7 +142,7 @@ class ArticleAggregatorService
                 'image_url' => $this->extractImageUrl($articleData),
                 'published_at' => $this->extractPublishedAt($articleData),
                 'fetched_at' => now(),
-                'source_id' => $source->id,
+                'source_id' => $realSource->id,
                 'author_id' => $author?->id,
                 'category_id' => $category->id,
             ]);
@@ -265,10 +290,14 @@ class ArticleAggregatorService
 
         // NY Times byline.original (search) or byline (top stories)
         if (isset($data['byline']['original'])) {
-            return $data['byline']['original'];
+            $author = $data['byline']['original'];
+            // Remove "By " prefix if present
+            return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
         if (isset($data['byline'])) {
-            return $data['byline'];
+            $author = $data['byline'];
+            // Remove "By " prefix if present
+            return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
 
         return 'Unknown';
