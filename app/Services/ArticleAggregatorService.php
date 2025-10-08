@@ -19,6 +19,7 @@ class ArticleAggregatorService
     public function __construct(ArticleRepositoryInterface $articleRepository)
     {
         $this->articleRepository = $articleRepository;
+        // Set up the three news sources we're pulling from
         $this->newsServices = [
             app(NewsAPIService::class),
             app(GuardianService::class),
@@ -53,6 +54,7 @@ class ArticleAggregatorService
         $source = $this->getOrCreateSource($service);
 
         foreach ($articles as $articleData) {
+            // Skip if we already have this article (check by URL)
             if ($this->isDuplicate($articleData, $source)) {
                 continue;
             }
@@ -80,7 +82,7 @@ class ArticleAggregatorService
 
     private function getOrCreateRealSource(array $articleData, Source $fallbackSource): Source
     {
-        // NewsAPI provides real source names in article data
+        // NewsAPI gives us real source names like "ABC News", use those instead of generic "News API"
         if (isset($articleData['source']['name']) && !empty($articleData['source']['name'])) {
             $realSourceName = $articleData['source']['name'];
             return Source::firstOrCreate(
@@ -94,10 +96,7 @@ class ArticleAggregatorService
             );
         }
 
-        // Guardian provides sectionName which could be used, but we'll stick with service source for now
-        // NY Times doesn't provide individual source names in top stories
 
-        // Fall back to the service source
         return $fallbackSource;
     }
 
@@ -128,7 +127,7 @@ class ArticleAggregatorService
     private function createArticle(array $articleData, Source $source): ?Article
     {
         try {
-            // Use real source name from article data if available (e.g., NewsAPI provides actual source names)
+            // For NewsAPI, try to get the real publication name instead of generic "News API"
             $realSource = $this->getOrCreateRealSource($articleData, $source);
             $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
             $category = $this->getOrCreateCategory($this->extractCategory($articleData));
@@ -156,17 +155,14 @@ class ArticleAggregatorService
 
     private function extractTitle(array $data): string
     {
-        // NewsAPI direct field
         if (isset($data['title'])) {
             return $data['title'];
         }
 
-        // NY Times headline.main (search API) or title (top stories)
         if (isset($data['headline']['main'])) {
             return $data['headline']['main'];
         }
 
-        // Guardian webTitle
         if (isset($data['webTitle'])) {
             return $data['webTitle'];
         }
@@ -176,17 +172,14 @@ class ArticleAggregatorService
 
     private function extractDescription(array $data): ?string
     {
-        // NewsAPI direct field
         if (isset($data['description'])) {
             return $data['description'];
         }
 
-        // NY Times abstract
         if (isset($data['abstract'])) {
             return $data['abstract'];
         }
 
-        // Guardian fields.trailText
         if (isset($data['fields']['trailText'])) {
             return $data['fields']['trailText'];
         }
@@ -196,33 +189,27 @@ class ArticleAggregatorService
 
     private function extractContent(array $data): ?string
     {
-        // NewsAPI direct field
         if (isset($data['content'])) {
             return $data['content'];
         }
 
-        // Guardian fields.body
         if (isset($data['fields']['body'])) {
             return $data['fields']['body'];
         }
 
-        // NY Times doesn't provide full content in basic APIs
         return null;
     }
 
     private function extractUrl(array $data): string
     {
-        // NewsAPI direct field
         if (isset($data['url'])) {
             return $data['url'];
         }
 
-        // Guardian webUrl
         if (isset($data['webUrl'])) {
             return $data['webUrl'];
         }
 
-        // NY Times web_url (search) or url (top stories)
         if (isset($data['web_url'])) {
             return $data['web_url'];
         }
@@ -235,17 +222,14 @@ class ArticleAggregatorService
 
     private function extractImageUrl(array $data): ?string
     {
-        // NewsAPI urlToImage
         if (isset($data['urlToImage'])) {
             return $data['urlToImage'];
         }
 
-        // Guardian fields.thumbnail
         if (isset($data['fields']['thumbnail'])) {
             return $data['fields']['thumbnail'];
         }
 
-        // NY Times multimedia array
         if (isset($data['multimedia']) && is_array($data['multimedia']) && count($data['multimedia']) > 0) {
             return $data['multimedia'][0]['url'] ?? null;
         }
@@ -255,17 +239,14 @@ class ArticleAggregatorService
 
     private function extractPublishedAt(array $data): ?string
     {
-        // NewsAPI publishedAt
         if (isset($data['publishedAt'])) {
             return \Carbon\Carbon::parse($data['publishedAt']);
         }
 
-        // Guardian webPublicationDate
         if (isset($data['webPublicationDate'])) {
             return \Carbon\Carbon::parse($data['webPublicationDate']);
         }
 
-        // NY Times pub_date (search) or published_date (top stories)
         if (isset($data['pub_date'])) {
             return \Carbon\Carbon::parse($data['pub_date']);
         }
@@ -278,25 +259,22 @@ class ArticleAggregatorService
 
     private function extractAuthor(array $data): ?string
     {
-        // NewsAPI author
         if (isset($data['author'])) {
             return $data['author'];
         }
 
-        // Guardian fields.byline
         if (isset($data['fields']['byline'])) {
             return $data['fields']['byline'];
         }
 
-        // NY Times byline.original (search) or byline (top stories)
         if (isset($data['byline']['original'])) {
             $author = $data['byline']['original'];
-            // Remove "By " prefix if present
+            // NY Times often prefixes authors with "By ", so clean that up
             return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
         if (isset($data['byline'])) {
             $author = $data['byline'];
-            // Remove "By " prefix if present
+            // NY Times often prefixes authors with "By ", so clean that up
             return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
 
@@ -305,12 +283,10 @@ class ArticleAggregatorService
     
     private function extractCategory(array $data): string
     {
-        // Guardian sectionName
         if (isset($data['sectionName'])) {
             return $data['sectionName'];
         }
 
-        // NY Times section (top stories) or section_name (search)
         if (isset($data['section'])) {
             return $data['section'];
         }
@@ -318,12 +294,12 @@ class ArticleAggregatorService
             return $data['section_name'];
         }
 
-        // NewsAPI doesn't provide category in response
         return 'General';
     }
 
     private function generateSlug(string $title): string
     {
+        // Add timestamp to avoid slug conflicts
         return \Str::slug($title) . '-' . time();
     }
 }
