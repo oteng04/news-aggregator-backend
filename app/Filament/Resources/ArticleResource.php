@@ -40,6 +40,12 @@ class ArticleResource extends Resource
                 Forms\Components\Select::make('source_id')
                     ->relationship('source', 'name')
                     ->required(),
+                Forms\Components\Select::make('category_id')
+                    ->relationship('category', 'name')
+                    ->required(),
+                Forms\Components\Select::make('author_id')
+                    ->relationship('authors', 'name')
+                    ->required(),
             ]);
     }
 
@@ -53,6 +59,12 @@ class ArticleResource extends Resource
                     ->limit(50),
                 Tables\Columns\TextColumn::make('source.name')
                     ->label('Source')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('Category')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('authors.first.name')
+                    ->label('Author')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('published_at')
                     ->dateTime()
@@ -87,6 +99,7 @@ class ArticleResource extends Resource
         return [
             'index' => Pages\ListArticles::route('/'),
             'create' => Pages\CreateArticle::route('/create'),
+            'view' => Pages\ViewArticle::route('/{record}'),
             'edit' => Pages\EditArticle::route('/{record}/edit'),
         ];
     }
