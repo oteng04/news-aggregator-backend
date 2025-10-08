@@ -32,8 +32,8 @@ class ArticleAggregatorService
 
         foreach ($this->newsServices as $service) {
             try {
-                $articles = $service->fetchArticles($category);
-                $processed = $this->processArticles($articles, $service, $category);
+                $articles = $service->fetchArticles();
+                $processed = $this->processArticles($articles, $service);
                 $totalFetched += $processed;
                 
                 Log::info("Fetched {$processed} articles from {$service->getSourceName()}");
@@ -47,7 +47,7 @@ class ArticleAggregatorService
         return $totalFetched;
     }
 
-    private function processArticles(Collection $articles, NewsSourceInterface $service, string $category = 'general'): int
+    private function processArticles(Collection $articles, NewsSourceInterface $service): int
     {
         $processed = 0;
         $source = $this->getOrCreateSource($service);
@@ -57,7 +57,7 @@ class ArticleAggregatorService
                 continue;
             }
 
-            $article = $this->createArticle($articleData, $source, $category);
+            $article = $this->createArticle($articleData, $source);
             if ($article) {
                 $processed++;
             }
@@ -102,17 +102,11 @@ class ArticleAggregatorService
         return Article::where('url', $url)->exists();
     }
 
-    private function createArticle(array $articleData, Source $source, string $category = 'general'): ?Article
+    private function createArticle(array $articleData, Source $source): ?Article
     {
         try {
             $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
-            $extractedCategory = $this->extractCategory($articleData);
-
-            // For NewsAPI, use the passed category since it doesn't provide categories in response
-            // For Guardian and NY Times, use the extracted category from the API response
-            $finalCategory = ($extractedCategory !== 'General') ? $extractedCategory : $category;
-
-            $categoryObj = $this->getOrCreateCategory($finalCategory);
+            $category = $this->getOrCreateCategory($this->extractCategory($articleData));
             
             $article = Article::create([
                 'title' => $this->extractTitle($articleData),
@@ -137,59 +131,166 @@ class ArticleAggregatorService
 
     private function extractTitle(array $data): string
     {
-        // NY Times API has nested headline structure
-        if (isset($data['headline']) && is_array($data['headline'])) {
-            return $data['headline']['main'] ?? 'Untitled';
+        // NewsAPI direct field
+        if (isset($data['title'])) {
+            return $data['title'];
         }
 
-        return $data['title'] ?? $data['headline'] ?? $data['webTitle'] ?? 'Untitled';
+        // NY Times headline.main (search API) or title (top stories)
+        if (isset($data['headline']['main'])) {
+            return $data['headline']['main'];
+        }
+
+        // Guardian webTitle
+        if (isset($data['webTitle'])) {
+            return $data['webTitle'];
+        }
+
+        return 'Untitled';
     }
 
     private function extractDescription(array $data): ?string
     {
-        return $data['description'] ?? $data['trailText'] ?? null;
+        // NewsAPI direct field
+        if (isset($data['description'])) {
+            return $data['description'];
+        }
+
+        // NY Times abstract
+        if (isset($data['abstract'])) {
+            return $data['abstract'];
+        }
+
+        // Guardian fields.trailText
+        if (isset($data['fields']['trailText'])) {
+            return $data['fields']['trailText'];
+        }
+
+        return null;
     }
 
     private function extractContent(array $data): ?string
     {
-        return $data['content'] ?? $data['body'] ?? null;
+        // NewsAPI direct field
+        if (isset($data['content'])) {
+            return $data['content'];
+        }
+
+        // Guardian fields.body
+        if (isset($data['fields']['body'])) {
+            return $data['fields']['body'];
+        }
+
+        // NY Times doesn't provide full content in basic APIs
+        return null;
     }
 
     private function extractUrl(array $data): string
     {
-        return $data['url'] ?? $data['webUrl'] ?? '';
+        // NewsAPI direct field
+        if (isset($data['url'])) {
+            return $data['url'];
+        }
+
+        // Guardian webUrl
+        if (isset($data['webUrl'])) {
+            return $data['webUrl'];
+        }
+
+        // NY Times web_url (search) or url (top stories)
+        if (isset($data['web_url'])) {
+            return $data['web_url'];
+        }
+        if (isset($data['url'])) {
+            return $data['url'];
+        }
+
+        return '';
     }
 
     private function extractImageUrl(array $data): ?string
     {
-        return $data['urlToImage'] ?? $data['thumbnail'] ?? null;
+        // NewsAPI urlToImage
+        if (isset($data['urlToImage'])) {
+            return $data['urlToImage'];
+        }
+
+        // Guardian fields.thumbnail
+        if (isset($data['fields']['thumbnail'])) {
+            return $data['fields']['thumbnail'];
+        }
+
+        // NY Times multimedia array
+        if (isset($data['multimedia']) && is_array($data['multimedia']) && count($data['multimedia']) > 0) {
+            return $data['multimedia'][0]['url'] ?? null;
+        }
+
+        return null;
     }
 
     private function extractPublishedAt(array $data): ?string
     {
-        $date = $data['publishedAt'] ?? $data['webPublicationDate'] ?? $data['pub_date'] ?? $data['published_date'] ?? null;
-        return $date ? \Carbon\Carbon::parse($date) : now();
+        // NewsAPI publishedAt
+        if (isset($data['publishedAt'])) {
+            return \Carbon\Carbon::parse($data['publishedAt']);
+        }
+
+        // Guardian webPublicationDate
+        if (isset($data['webPublicationDate'])) {
+            return \Carbon\Carbon::parse($data['webPublicationDate']);
+        }
+
+        // NY Times pub_date (search) or published_date (top stories)
+        if (isset($data['pub_date'])) {
+            return \Carbon\Carbon::parse($data['pub_date']);
+        }
+        if (isset($data['published_date'])) {
+            return \Carbon\Carbon::parse($data['published_date']);
+        }
+
+        return now();
     }
 
     private function extractAuthor(array $data): ?string
     {
-        return $data['author'] ?? $data['fields']['byline'] ?? $data['byline']['original'] ?? 'Unknown';
+        // NewsAPI author
+        if (isset($data['author'])) {
+            return $data['author'];
+        }
+
+        // Guardian fields.byline
+        if (isset($data['fields']['byline'])) {
+            return $data['fields']['byline'];
+        }
+
+        // NY Times byline.original (search) or byline (top stories)
+        if (isset($data['byline']['original'])) {
+            return $data['byline']['original'];
+        }
+        if (isset($data['byline'])) {
+            return $data['byline'];
+        }
+
+        return 'Unknown';
     }
     
     private function extractCategory(array $data): string
     {
-        // Guardian API uses 'sectionName'
+        // Guardian sectionName
         if (isset($data['sectionName'])) {
             return $data['sectionName'];
         }
 
-        // NY Times API uses 'section'
+        // NY Times section (top stories) or section_name (search)
         if (isset($data['section'])) {
             return $data['section'];
         }
+        if (isset($data['section_name'])) {
+            return $data['section_name'];
+        }
 
-        // NewsAPI doesn't provide category in response, so we use the passed parameter
-        return $data['category'] ?? $data['pillarName'] ?? $data['section_name'] ?? 'General';
+        // NewsAPI doesn't provide category in response
+        return 'General';
     }
 
     private function generateSlug(string $title): string
