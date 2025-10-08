@@ -32,8 +32,8 @@ class ArticleAggregatorService
 
         foreach ($this->newsServices as $service) {
             try {
-                $articles = $service->fetchArticles();
-                $processed = $this->processArticles($articles, $service);
+                $articles = $service->fetchArticles($category);
+                $processed = $this->processArticles($articles, $service, $category);
                 $totalFetched += $processed;
                 
                 Log::info("Fetched {$processed} articles from {$service->getSourceName()}");
@@ -47,7 +47,7 @@ class ArticleAggregatorService
         return $totalFetched;
     }
 
-    private function processArticles(Collection $articles, NewsSourceInterface $service): int
+    private function processArticles(Collection $articles, NewsSourceInterface $service, string $category = 'general'): int
     {
         $processed = 0;
         $source = $this->getOrCreateSource($service);
@@ -57,7 +57,7 @@ class ArticleAggregatorService
                 continue;
             }
 
-            $article = $this->createArticle($articleData, $source);
+            $article = $this->createArticle($articleData, $source, $category);
             if ($article) {
                 $processed++;
             }
@@ -102,11 +102,17 @@ class ArticleAggregatorService
         return Article::where('url', $url)->exists();
     }
 
-    private function createArticle(array $articleData, Source $source): ?Article
+    private function createArticle(array $articleData, Source $source, string $category = 'general'): ?Article
     {
         try {
             $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
-            $category = $this->getOrCreateCategory($this->extractCategory($articleData));
+            $extractedCategory = $this->extractCategory($articleData);
+
+            // For NewsAPI, use the passed category since it doesn't provide categories in response
+            // For Guardian and NY Times, use the extracted category from the API response
+            $finalCategory = ($extractedCategory !== 'General') ? $extractedCategory : $category;
+
+            $categoryObj = $this->getOrCreateCategory($finalCategory);
             
             $article = Article::create([
                 'title' => $this->extractTitle($articleData),

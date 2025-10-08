@@ -23,11 +23,9 @@ class GuardianService implements NewsSourceInterface
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/search', [
                 'api-key' => $this->apiKey,
-                'section' => $category,
                 'page' => $page,
                 'page-size' => 50,
                 'order-by' => 'newest',
-                'show-fields' => 'headline,trailText,body,thumbnail'
             ]);
 
             if ($response->successful()) {

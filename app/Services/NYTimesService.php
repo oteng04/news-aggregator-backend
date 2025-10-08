@@ -21,11 +21,8 @@ class NYTimesService implements NewsSourceInterface
     public function fetchArticles(string $category = 'general', int $page = 1): Collection
     {
         try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/search/v2/articlesearch.json', [
+            $response = Http::timeout(30)->get($this->baseUrl . '/topstories/v2/home.json', [
                 'api-key' => $this->apiKey,
-                'fq' => "section_name:(\"{$category}\")",
-                'page' => $page,
-                'sort' => 'newest'
             ]);
 
             if ($response->successful()) {
