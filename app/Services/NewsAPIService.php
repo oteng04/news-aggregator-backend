@@ -18,16 +18,12 @@ class NewsAPIService implements NewsSourceInterface
         $this->baseUrl = config('news.providers.news_api.base_url') ?? env('NEWSAPI_BASE_URL');
     }
 
-    public function fetchArticles(string $category = 'general', int $page = 1): Collection
+    public function fetchArticles(int $page = 1): Collection
     {
         try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/everything', [
+            $response = Http::timeout(30)->get($this->baseUrl . '/top-headlines', [
                 'apiKey' => $this->apiKey,
-                'q' => $category,
-                'page' => $page,
-                'pageSize' => 50,
-                'sortBy' => 'publishedAt',
-                'language' => 'en'
+                'country' => 'us'
             ]);
 
             if ($response->successful()) {

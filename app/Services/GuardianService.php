@@ -18,7 +18,7 @@ class GuardianService implements NewsSourceInterface
         $this->baseUrl = config('news.providers.guardian.base_url') ?? env('GUARDIAN_BASE_URL');
     }
 
-    public function fetchArticles(string $category = 'general', int $page = 1): Collection
+    public function fetchArticles(int $page = 1): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/search', [
@@ -26,6 +26,7 @@ class GuardianService implements NewsSourceInterface
                 'page' => $page,
                 'page-size' => 50,
                 'order-by' => 'newest',
+                'show-fields' => 'headline,trailText,body,thumbnail'
             ]);
 
             if ($response->successful()) {
