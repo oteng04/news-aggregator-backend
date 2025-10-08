@@ -17,6 +17,7 @@ class Author extends Model
 
     public function articles(): BelongsToMany
     {
+        // Authors can write multiple articles, articles can have multiple authors
         return $this->belongsToMany(Article::class);
     }
 }

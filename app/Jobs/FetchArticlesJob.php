@@ -14,8 +14,8 @@ class FetchArticlesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
-    public int $timeout = 300;
+    public int $tries = 3;        // Retry up to 3 times on failure
+    public int $timeout = 300;    // Allow up to 5 minutes for API calls
 
     
 

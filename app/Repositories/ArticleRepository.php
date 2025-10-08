@@ -31,12 +31,14 @@ class ArticleRepository implements ArticleRepositoryInterface
     public function search(string $query, array $filters = []): LengthAwarePaginator
     {
         $articles = Article::with(['source', 'category', 'authors'])
+            // Search across title, description, and content fields
             ->where(function ($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                   ->orWhere('description', 'like', "%{$query}%")
                   ->orWhere('content', 'like', "%{$query}%");
             });
 
+        // Apply optional filters for source and category
         if (isset($filters['source_id'])) {
             $articles->where('source_id', $filters['source_id']);
         }

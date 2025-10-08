@@ -59,6 +59,7 @@ class ArticleController extends Controller
             ], 400);
         }
 
+        // Search in title, description, and content with optional source/category filters
         $articles = $this->articleRepository->search($query, $filters);
 
         return response()->json([
