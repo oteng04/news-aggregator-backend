@@ -26,13 +26,13 @@ class ArticleAggregatorService
         ];
     }
 
-    public function fetchAllArticles(string $category = 'general'): int
+    public function fetchAllArticles(): int
     {
         $totalFetched = 0;
 
         foreach ($this->newsServices as $service) {
             try {
-                $articles = $service->fetchArticles($category);
+                $articles = $service->fetchArticles();
                 $processed = $this->processArticles($articles, $service);
                 $totalFetched += $processed;
                 
@@ -131,7 +131,12 @@ class ArticleAggregatorService
 
     private function extractTitle(array $data): string
     {
-        return $data['title'] ?? $data['headline'] ?? 'Untitled';
+        // NY Times API has nested headline structure
+        if (isset($data['headline']) && is_array($data['headline'])) {
+            return $data['headline']['main'] ?? 'Untitled';
+        }
+
+        return $data['title'] ?? $data['headline'] ?? $data['webTitle'] ?? 'Untitled';
     }
 
     private function extractDescription(array $data): ?string
@@ -156,7 +161,7 @@ class ArticleAggregatorService
 
     private function extractPublishedAt(array $data): ?string
     {
-        $date = $data['publishedAt'] ?? $data['webPublicationDate'] ?? $data['pub_date'] ?? null;
+        $date = $data['publishedAt'] ?? $data['webPublicationDate'] ?? $data['pub_date'] ?? $data['published_date'] ?? null;
         return $date ? \Carbon\Carbon::parse($date) : now();
     }
 
@@ -165,8 +170,19 @@ class ArticleAggregatorService
         return $data['author'] ?? $data['fields']['byline'] ?? $data['byline']['original'] ?? 'Unknown';
     }
     
-    private function extractCategory(array $data): ?string
+    private function extractCategory(array $data): string
     {
+        // Guardian API uses 'sectionName'
+        if (isset($data['sectionName'])) {
+            return $data['sectionName'];
+        }
+
+        // NY Times API uses 'section'
+        if (isset($data['section'])) {
+            return $data['section'];
+        }
+
+        // NewsAPI doesn't provide category in response, so we use the passed parameter
         return $data['category'] ?? $data['pillarName'] ?? $data['section_name'] ?? 'General';
     }
 
