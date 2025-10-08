@@ -142,9 +142,13 @@ class ArticleAggregatorService
                 'published_at' => $this->extractPublishedAt($articleData),
                 'fetched_at' => now(),
                 'source_id' => $realSource->id,
-                'author_id' => $author?->id,
                 'category_id' => $category->id,
             ]);
+
+            // Attach the author using the many-to-many relationship
+            if ($author) {
+                $article->authors()->attach($author->id);
+            }
 
             return $article;
         } catch (\Exception $e) {
