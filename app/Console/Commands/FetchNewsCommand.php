@@ -7,16 +7,15 @@ use Illuminate\Console\Command;
 
 class FetchNewsCommand extends Command
 {
-    protected $signature = 'news:fetch {category=general}';
+    protected $signature = 'news:fetch';
     protected $description = 'Fetch news articles from all sources';
 
     public function handle(): int
     {
-        $category = $this->argument('category');
         
-        $this->info("Dispatching job to fetch {$category} news...");
+        $this->info("Dispatching job to fetch  news...");
         
-        FetchArticlesJob::dispatch($category);
+        FetchArticlesJob::dispatch();
         
         $this->info('Job dispatched successfully!');
         
