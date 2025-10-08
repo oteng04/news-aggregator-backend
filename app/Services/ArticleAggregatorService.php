@@ -11,10 +11,6 @@ use App\Services\Contracts\NewsSourceInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Main service for aggregating news articles from multiple sources.
- * Handles the complexity of different API formats and normalizes them into our database.
- */
 class ArticleAggregatorService
 {
     private ArticleRepositoryInterface $articleRepository;
@@ -23,9 +19,6 @@ class ArticleAggregatorService
     public function __construct(ArticleRepositoryInterface $articleRepository)
     {
         $this->articleRepository = $articleRepository;
-
-        // Set up our news sources - NewsAPI gives us broad coverage,
-        // Guardian for UK-focused content, NY Times for US news
         $this->newsServices = [
             app(NewsAPIService::class),
             app(GuardianService::class),
@@ -33,15 +26,10 @@ class ArticleAggregatorService
         ];
     }
 
-    /**
-     * Go through all our news services and fetch articles from each.
-     * This is the main entry point when we want to update our database with fresh news.
-     */
     public function fetchAllArticles(): int
     {
         $totalFetched = 0;
 
-        // Hit up each news service one by one
         foreach ($this->newsServices as $service) {
             try {
                 $articles = $service->fetchArticles();
@@ -90,14 +78,9 @@ class ArticleAggregatorService
         );
     }
 
-    /**
-     * For NewsAPI, we can get the actual publication name from the article data.
-     * Instead of showing "News API" for everything, we show "ABC News", "BBC", etc.
-     * Other services don't provide this level of detail so they use the fallback.
-     */
     private function getOrCreateRealSource(array $articleData, Source $fallbackSource): Source
     {
-        // NewsAPI gives us real source names in the article data
+        // NewsAPI provides real source names in article data
         if (isset($articleData['source']['name']) && !empty($articleData['source']['name'])) {
             $realSourceName = $articleData['source']['name'];
             return Source::firstOrCreate(
@@ -111,7 +94,10 @@ class ArticleAggregatorService
             );
         }
 
-       
+        // Guardian provides sectionName which could be used, but we'll stick with service source for now
+        // NY Times doesn't provide individual source names in top stories
+
+        // Fall back to the service source
         return $fallbackSource;
     }
 
@@ -139,15 +125,10 @@ class ArticleAggregatorService
         return Article::where('url', $url)->exists();
     }
 
-    /**
-     * Take raw article data from an API and turn it into a proper Article record.
-     * This handles all the messy differences between APIs - different field names,
-     * different date formats, etc. It's like being a translator for 3 different languages.
-     */
     private function createArticle(array $articleData, Source $source): ?Article
     {
         try {
-            // NewsAPI gives us real publication names, others just use the service name
+            // Use real source name from article data if available (e.g., NewsAPI provides actual source names)
             $realSource = $this->getOrCreateRealSource($articleData, $source);
             $author = $this->getOrCreateAuthor($this->extractAuthor($articleData));
             $category = $this->getOrCreateCategory($this->extractCategory($articleData));
@@ -175,14 +156,17 @@ class ArticleAggregatorService
 
     private function extractTitle(array $data): string
     {
+        // NewsAPI direct field
         if (isset($data['title'])) {
             return $data['title'];
         }
 
+        // NY Times headline.main (search API) or title (top stories)
         if (isset($data['headline']['main'])) {
             return $data['headline']['main'];
         }
 
+        // Guardian webTitle
         if (isset($data['webTitle'])) {
             return $data['webTitle'];
         }
@@ -192,14 +176,17 @@ class ArticleAggregatorService
 
     private function extractDescription(array $data): ?string
     {
+        // NewsAPI direct field
         if (isset($data['description'])) {
             return $data['description'];
         }
 
+        // NY Times abstract
         if (isset($data['abstract'])) {
             return $data['abstract'];
         }
 
+        // Guardian fields.trailText
         if (isset($data['fields']['trailText'])) {
             return $data['fields']['trailText'];
         }
@@ -209,27 +196,33 @@ class ArticleAggregatorService
 
     private function extractContent(array $data): ?string
     {
+        // NewsAPI direct field
         if (isset($data['content'])) {
             return $data['content'];
         }
 
+        // Guardian fields.body
         if (isset($data['fields']['body'])) {
             return $data['fields']['body'];
         }
 
+        // NY Times doesn't provide full content in basic APIs
         return null;
     }
 
     private function extractUrl(array $data): string
     {
+        // NewsAPI direct field
         if (isset($data['url'])) {
             return $data['url'];
         }
 
+        // Guardian webUrl
         if (isset($data['webUrl'])) {
             return $data['webUrl'];
         }
 
+        // NY Times web_url (search) or url (top stories)
         if (isset($data['web_url'])) {
             return $data['web_url'];
         }
@@ -242,14 +235,17 @@ class ArticleAggregatorService
 
     private function extractImageUrl(array $data): ?string
     {
+        // NewsAPI urlToImage
         if (isset($data['urlToImage'])) {
             return $data['urlToImage'];
         }
 
+        // Guardian fields.thumbnail
         if (isset($data['fields']['thumbnail'])) {
             return $data['fields']['thumbnail'];
         }
 
+        // NY Times multimedia array
         if (isset($data['multimedia']) && is_array($data['multimedia']) && count($data['multimedia']) > 0) {
             return $data['multimedia'][0]['url'] ?? null;
         }
@@ -259,14 +255,17 @@ class ArticleAggregatorService
 
     private function extractPublishedAt(array $data): ?string
     {
+        // NewsAPI publishedAt
         if (isset($data['publishedAt'])) {
             return \Carbon\Carbon::parse($data['publishedAt']);
         }
 
+        // Guardian webPublicationDate
         if (isset($data['webPublicationDate'])) {
             return \Carbon\Carbon::parse($data['webPublicationDate']);
         }
 
+        // NY Times pub_date (search) or published_date (top stories)
         if (isset($data['pub_date'])) {
             return \Carbon\Carbon::parse($data['pub_date']);
         }
@@ -279,21 +278,25 @@ class ArticleAggregatorService
 
     private function extractAuthor(array $data): ?string
     {
+        // NewsAPI author
         if (isset($data['author'])) {
             return $data['author'];
         }
 
+        // Guardian fields.byline
         if (isset($data['fields']['byline'])) {
             return $data['fields']['byline'];
         }
 
-        // NY Times likes to prefix author names with "By " - let's clean that up
+        // NY Times byline.original (search) or byline (top stories)
         if (isset($data['byline']['original'])) {
             $author = $data['byline']['original'];
+            // Remove "By " prefix if present
             return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
         if (isset($data['byline'])) {
             $author = $data['byline'];
+            // Remove "By " prefix if present
             return str_starts_with($author, 'By ') ? substr($author, 3) : $author;
         }
 
@@ -302,12 +305,12 @@ class ArticleAggregatorService
     
     private function extractCategory(array $data): string
     {
-        // Guardian gives us nice readable section names like "Sport", "Politics"
+        // Guardian sectionName
         if (isset($data['sectionName'])) {
             return $data['sectionName'];
         }
 
-        // NY Times uses shorter codes, but they're still meaningful
+        // NY Times section (top stories) or section_name (search)
         if (isset($data['section'])) {
             return $data['section'];
         }
@@ -315,6 +318,7 @@ class ArticleAggregatorService
             return $data['section_name'];
         }
 
+        // NewsAPI doesn't provide category in response
         return 'General';
     }
 
