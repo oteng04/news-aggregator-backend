@@ -85,12 +85,14 @@ class ArticleAggregatorService
         // NewsAPI gives us real source names like "ABC News", use those instead of generic "News API"
         if (isset($articleData['source']['name']) && !empty($articleData['source']['name'])) {
             $realSourceName = $articleData['source']['name'];
+            $apiIdentifier = $articleData['source']['id'] ?? \Str::slug($realSourceName);
+
             return Source::firstOrCreate(
                 ['name' => $realSourceName],
                 [
                     'name' => $realSourceName,
                     'slug' => \Str::slug($realSourceName),
-                    'api_identifier' => $fallbackSource->api_identifier,
+                    'api_identifier' => $apiIdentifier,
                     'enabled' => true
                 ]
             );
