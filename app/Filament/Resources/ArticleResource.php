@@ -48,8 +48,9 @@ class ArticleResource extends Resource
                 Forms\Components\Select::make('category_id')
                     ->relationship('category', 'name')
                     ->required(),
-                Forms\Components\BelongsToManySelect::make('authors')
+                Forms\Components\Select::make('authors')
                     ->relationship('authors', 'name')
+                    ->multiple()
                     ->preload(),
             ]);
     }
