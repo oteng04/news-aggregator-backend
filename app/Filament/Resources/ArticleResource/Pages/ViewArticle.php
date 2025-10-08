@@ -10,6 +10,11 @@ class ViewArticle extends ViewRecord
 {
     protected static string $resource = ArticleResource::class;
 
+    public function getTitle(): string
+    {
+        return $this->record->title;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

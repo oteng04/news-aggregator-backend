@@ -19,6 +19,11 @@ class ArticleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['source', 'category', 'authors']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -43,9 +48,9 @@ class ArticleResource extends Resource
                 Forms\Components\Select::make('category_id')
                     ->relationship('category', 'name')
                     ->required(),
-                Forms\Components\Select::make('author_id')
+                Forms\Components\BelongsToManySelect::make('authors')
                     ->relationship('authors', 'name')
-                    ->required(),
+                    ->preload(),
             ]);
     }
 
@@ -63,9 +68,11 @@ class ArticleResource extends Resource
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Category')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('authors.first.name')
-                    ->label('Author')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('authors.name')
+                    ->label('Authors')
+                    ->listWithLineBreaks()
+                    ->limitList(2)
+                    ->expandableLimitedList(),
                 Tables\Columns\TextColumn::make('published_at')
                     ->dateTime()
                     ->sortable(),
