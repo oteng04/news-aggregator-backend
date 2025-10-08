@@ -17,24 +17,20 @@ class FetchArticlesJob implements ShouldQueue
     public int $tries = 3;
     public int $timeout = 300;
 
-    public function __construct(
-        private string $category = 'general'
-    ) {}
+    
 
     public function handle(ArticleAggregatorService $aggregatorService): void
     {
         try {
-            Log::info("Starting article fetch job for category: {$this->category}");
+            Log::info("Starting article fetch job");
             
-            $totalFetched = $aggregatorService->fetchAllArticles($this->category);
+            $totalFetched = $aggregatorService->fetchAllArticles();
             
             Log::info("Article fetch job completed", [
-                'category' => $this->category,
                 'total_fetched' => $totalFetched
             ]);
         } catch (\Exception $e) {
             Log::error("Article fetch job failed", [
-                'category' => $this->category,
                 'error' => $e->getMessage()
             ]);
             
@@ -45,7 +41,6 @@ class FetchArticlesJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         Log::error("Article fetch job failed permanently", [
-            'category' => $this->category,
             'error' => $exception->getMessage()
         ]);
     }
