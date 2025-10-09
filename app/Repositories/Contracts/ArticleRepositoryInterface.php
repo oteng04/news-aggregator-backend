@@ -34,7 +34,9 @@ interface ArticleRepositoryInterface
     public function paginate(): LengthAwarePaginator;
     
     public function getLatestArticles(array $filters = []): LengthAwarePaginator;
-    
+
+    public function getPaginatedWithFilters(int $perPage = 20, array $filters = []): LengthAwarePaginator;
+
     public function updateOrCreate(array $attributes, array $data): object;
     
     public function upsert(array $values, array $uniqueBy, array $update): int;

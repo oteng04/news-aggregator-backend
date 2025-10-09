@@ -2,79 +2,42 @@
 
 namespace App\Services;
 
-use App\Services\Contracts\NewsSourceInterface;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Services\Normalizers\GuardianNormalizer;
 
-class GuardianService implements NewsSourceInterface
+class GuardianService extends BaseNewsService
 {
-    private string $apiKey;
-    private string $baseUrl;
-
     public function __construct()
     {
-        $this->apiKey = config('news.providers.guardian.api_key') ?? env('GUARDIAN_API_KEY');
-        $this->baseUrl = config('news.providers.guardian.base_url') ?? env('GUARDIAN_BASE_URL');
+        parent::__construct('guardian');
     }
 
-    public function fetchArticles(int $page = 1, array $options = []): Collection
+    protected function createNormalizer()
     {
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/search', [
-                'api-key' => $this->apiKey,
-                'page' => $page,
-                'page-size' => 50,
-                'order-by' => 'newest',
-                // Request specific fields we need for articles
-                'show-fields' => 'headline,trailText,body,thumbnail'
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['response']['results'] ?? []);
-            }
-
-            Log::error('Guardian API request failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('Guardian API exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return new GuardianNormalizer();
     }
 
-    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
+    protected function getFetchEndpoint(): string
     {
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/search', [
-                'api-key' => $this->apiKey,
-                'q' => $query,
-                'page' => $page,
-                'page-size' => 50,
-                'order-by' => 'newest',
-                'show-fields' => 'headline,trailText,body,thumbnail'
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['response']['results'] ?? []);
-            }
-
-            Log::error('Guardian search failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('Guardian search exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return $this->config['endpoints']['search'];
     }
 
-    public function getSourceName(): string
+    protected function getSearchEndpoint(): string
     {
-        return 'The Guardian';
+        return $this->config['endpoints']['search'];
     }
 
-    public function getApiIdentifier(): string
+    protected function getFetchParams(int $page, array $options): array
     {
-        return 'guardian';
+        return array_merge($this->config['default_params'], [
+            'page' => $page,
+        ], $options);
+    }
+
+    protected function getSearchParams(string $query, int $page, array $options): array
+    {
+        return array_merge($this->config['default_params'], [
+            'q' => $query,
+            'page' => $page,
+        ], $options);
     }
 }

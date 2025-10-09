@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | API Version
+    |--------------------------------------------------------------------------
+    |
+    | This value determines the current API version for versioning responses
+    | and documentation.
+    |
+    */
+
+    'api_version' => env('API_VERSION', '1.0.0'),
+
 ];

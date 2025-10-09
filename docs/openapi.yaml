@@ -1,0 +1,757 @@
+openapi: 3.0.3
+info:
+  title: News Aggregator API
+  description: |
+    A comprehensive REST API for aggregating news from multiple sources including NewsAPI, The Guardian, and New York Times.
+
+    ## Features
+    - Multi-source news aggregation
+    - Advanced search and filtering
+    - Pagination support
+    - Rate limiting
+    - Comprehensive error handling
+    - Real-time statistics
+
+    ## Authentication
+    Currently, no authentication is required for public endpoints.
+
+    ## Rate Limiting
+    - 1000 requests per hour for search endpoints
+    - 5000 requests per hour for listing endpoints
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@newsaggregator.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development server
+  - url: https://api.newsaggregator.com/api
+    description: Production server
+
+paths:
+  /articles:
+    get:
+      summary: Get paginated list of articles
+      description: |
+        Retrieve a paginated list of articles from all news sources.
+
+        Supports filtering by source, category, and date ranges.
+      operationId: getArticles
+      tags:
+        - Articles
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Number of articles per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: source_id
+          in: query
+          description: Filter by news source ID
+          required: false
+          schema:
+            type: integer
+        - name: category_id
+          in: query
+          description: Filter by category ID
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Search term for article content
+          required: false
+          schema:
+            type: string
+            minLength: 3
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Article'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    title: "Breaking News: Major Event Occurs"
+                    description: "A comprehensive overview of today's major news event..."
+                    content: "Full article content here..."
+                    url: "https://example.com/article/1"
+                    image_url: "https://example.com/image.jpg"
+                    published_at: "2024-01-15 10:30:00"
+                    source:
+                      name: "NewsAPI"
+                      id: "newsapi"
+                    author: "John Doe"
+                    category: "Politics"
+                    created_at: "2024-01-15 10:35:00"
+                    updated_at: "2024-01-15 10:35:00"
+                meta:
+                  current_page: 1
+                  per_page: 20
+                  total: 150
+                  last_page: 8
+                  from: 1
+                  to: 20
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /articles/search:
+    get:
+      summary: Search articles across all sources
+      description: |
+        Perform a full-text search across articles from all news sources.
+
+        Supports advanced search with multiple parameters.
+      operationId: searchArticles
+      tags:
+        - Articles
+      parameters:
+        - name: q
+          in: query
+          description: Search query string
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Number of results per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: source_id
+          in: query
+          description: Filter results by news source
+          required: false
+          schema:
+            type: integer
+        - name: category_id
+          in: query
+          description: Filter results by category
+          required: false
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          description: Sort results by field
+          required: false
+          schema:
+            type: string
+            enum: [published_at, created_at, title]
+            default: published_at
+        - name: sort_order
+          in: query
+          description: Sort order direction
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Search results returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Article'
+                  meta:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                      - type: object
+                        properties:
+                          query:
+                            type: string
+                            example: "technology"
+                          total_results:
+                            type: integer
+                            example: 1250
+              example:
+                success: true
+                data:
+                  - id: 15
+                    title: "Latest Technology Breakthrough"
+                    description: "Scientists announce major technology advancement..."
+                    content: "Detailed article content about the technology breakthrough..."
+                    url: "https://example.com/tech-article"
+                    image_url: "https://example.com/tech-image.jpg"
+                    published_at: "2024-01-15 14:20:00"
+                    source:
+                      name: "The Guardian"
+                      id: "guardian"
+                    author: "Jane Smith"
+                    category: "Technology"
+                meta:
+                  current_page: 1
+                  per_page: 20
+                  total: 1250
+                  last_page: 63
+                  query: "technology"
+                  total_results: 1250
+        '400':
+          description: Bad request - missing or invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                message: "Search query is required"
+                errors:
+                  q: ["The q field is required."]
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /articles/{slug}:
+    get:
+      summary: Get single article by slug
+      description: Retrieve a specific article using its URL slug.
+      operationId: getArticle
+      tags:
+        - Articles
+      parameters:
+        - name: slug
+          in: path
+          description: The URL slug of the article
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+      responses:
+        '200':
+          description: Article retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ArticleDetail'
+              example:
+                success: true
+                data:
+                  id: 1
+                  title: "Breaking News: Major Event Occurs"
+                  description: "A comprehensive overview of today's major news event..."
+                  content: "Full article content here with all the details..."
+                  url: "https://example.com/article/1"
+                  image_url: "https://example.com/image.jpg"
+                  published_at: "2024-01-15 10:30:00"
+                  source:
+                    name: "NewsAPI"
+                    id: "newsapi"
+                  author: "John Doe"
+                  category: "Politics"
+                  tags: ["politics", "breaking-news"]
+                  created_at: "2024-01-15 10:35:00"
+                  updated_at: "2024-01-15 10:35:00"
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                message: "Article not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /sources:
+    get:
+      summary: Get all news sources
+      description: Retrieve a list of all configured news sources.
+      operationId: getSources
+      tags:
+        - Sources
+      responses:
+        '200':
+          description: Sources retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Source'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    name: "NewsAPI"
+                    slug: "newsapi"
+                    api_identifier: "news_api"
+                    enabled: true
+                    created_at: "2024-01-15 10:00:00"
+                  - id: 2
+                    name: "The Guardian"
+                    slug: "the-guardian"
+                    api_identifier: "guardian"
+                    enabled: true
+                    created_at: "2024-01-15 10:00:00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /categories:
+    get:
+      summary: Get all categories
+      description: Retrieve a list of all article categories.
+      operationId: getCategories
+      tags:
+        - Categories
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    name: "Politics"
+                    slug: "politics"
+                    description: "Political news and analysis"
+                    created_at: "2024-01-15 10:00:00"
+                  - id: 2
+                    name: "Technology"
+                    slug: "technology"
+                    description: "Technology news and trends"
+                    created_at: "2024-01-15 10:00:00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /authors:
+    get:
+      summary: Get all authors
+      description: Retrieve a list of all article authors.
+      operationId: getAuthors
+      tags:
+        - Authors
+      responses:
+        '200':
+          description: Authors retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Author'
+              example:
+                success: true
+                data:
+                  - id: 1
+                    name: "John Doe"
+                    created_at: "2024-01-15 10:00:00"
+                  - id: 2
+                    name: "Jane Smith"
+                    created_at: "2024-01-15 10:00:00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check the health status of the API and its dependencies.
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "healthy"
+                      redis:
+                        type: string
+                        example: "healthy"
+                      newsapi:
+                        type: string
+                        example: "healthy"
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "unhealthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+
+  /stats:
+    get:
+      summary: Get system statistics
+      description: Retrieve various statistics about the system and content.
+      operationId: getStats
+      tags:
+        - System
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      total_articles:
+                        type: integer
+                        example: 15420
+                      total_sources:
+                        type: integer
+                        example: 3
+                      total_categories:
+                        type: integer
+                        example: 8
+                      total_authors:
+                        type: integer
+                        example: 1250
+                      articles_today:
+                        type: integer
+                        example: 45
+                      latest_article:
+                        type: string
+                        example: "Latest breaking news title"
+                      cache_hit_rate:
+                        type: number
+                        format: float
+                        example: 0.87
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "Breaking News: Major Event Occurs"
+        description:
+          type: string
+          example: "A comprehensive overview of today's major news event..."
+        content:
+          type: string
+          nullable: true
+          example: "Full article content here..."
+        url:
+          type: string
+          format: uri
+          example: "https://example.com/article/1"
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://example.com/image.jpg"
+        published_at:
+          type: string
+          format: date-time
+          example: "2024-01-15 10:30:00"
+        source:
+          $ref: '#/components/schemas/SourceSummary'
+        author:
+          type: string
+          nullable: true
+          example: "John Doe"
+        category:
+          type: string
+          nullable: true
+          example: "Politics"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ArticleDetail:
+      allOf:
+        - $ref: '#/components/schemas/Article'
+        - type: object
+          properties:
+            tags:
+              type: array
+              items:
+                type: string
+              example: ["politics", "breaking-news"]
+
+    SourceSummary:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "NewsAPI"
+        id:
+          type: string
+          example: "news_api"
+
+    Source:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "NewsAPI"
+        slug:
+          type: string
+          example: "newsapi"
+        api_identifier:
+          type: string
+          example: "news_api"
+        enabled:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Politics"
+        slug:
+          type: string
+          example: "politics"
+        description:
+          type: string
+          example: "Political news and analysis"
+        created_at:
+          type: string
+          format: date-time
+
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "John Doe"
+        created_at:
+          type: string
+          format: date-time
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        last_page:
+          type: integer
+          example: 8
+        from:
+          type: integer
+          example: 1
+        to:
+          type: integer
+          example: 20
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Validation failed"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            q: ["The q field is required."]
+            page: ["The page must be at least 1."]
+
+  responses:
+    ValidationError:
+      description: Validation failed for request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            message: "Validation failed"
+            errors:
+              q: ["The q field is required."]
+              page: ["The page must be at least 1."]
+
+    RateLimitExceeded:
+      description: Too many requests - rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "API rate limit exceeded"
+              retry_after:
+                type: integer
+                description: Seconds to wait before retrying
+                example: 60
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Internal server error"
+              error_code:
+                type: string
+                example: "INTERNAL_ERROR"
+
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future use)
+
+security:
+  - ApiKey: []
+
+tags:
+  - name: Articles
+    description: Article management and search operations
+  - name: Sources
+    description: News source management
+  - name: Categories
+    description: Article category management
+  - name: Authors
+    description: Article author management
+  - name: System
+    description: System health and statistics

@@ -2,76 +2,42 @@
 
 namespace App\Services;
 
-use App\Services\Contracts\NewsSourceInterface;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Services\Normalizers\NewsApiNormalizer;
 
-class NewsAPIService implements NewsSourceInterface
+class NewsAPIService extends BaseNewsService
 {
-    private string $apiKey;
-    private string $baseUrl;
-
     public function __construct()
     {
-        $this->apiKey = config('news.providers.news_api.api_key') ?? env('NEWSAPI_API_KEY');
-        $this->baseUrl = config('news.providers.news_api.base_url') ?? env('NEWSAPI_BASE_URL');
+        parent::__construct('news_api');
     }
 
-    public function fetchArticles(int $page = 1, array $options = []): Collection
+    protected function createNormalizer()
     {
-        try {
-            // Using top-headlines endpoint to get current US news headlines
-            $response = Http::timeout(30)->get($this->baseUrl . '/top-headlines', [
-                'apiKey' => $this->apiKey,
-                'country' => 'us'
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['articles'] ?? []);
-            }
-
-            Log::error('NewsAPI request failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('NewsAPI exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return new NewsApiNormalizer();
     }
 
-    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
+    protected function getFetchEndpoint(): string
     {
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/everything', [
-                'apiKey' => $this->apiKey,
-                'q' => $query,
-                'page' => $page,
-                'pageSize' => 50,
-                'sortBy' => 'publishedAt',
-                'language' => 'en'
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['articles'] ?? []);
-            }
-
-            Log::error('NewsAPI search failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('NewsAPI search exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return $this->config['endpoints']['top_headlines'];
     }
 
-    public function getSourceName(): string
+    protected function getSearchEndpoint(): string
     {
-        return 'News API';
+        return $this->config['endpoints']['everything'];
     }
 
-    public function getApiIdentifier(): string
+    protected function getFetchParams(int $page, array $options): array
     {
-        return 'news_api';
+        return array_merge($this->config['default_params'], [
+            'page' => $page,
+        ], $options);
+    }
+
+    protected function getSearchParams(string $query, int $page, array $options): array
+    {
+        return array_merge($this->config['default_params'], [
+            'q' => $query,
+            'page' => $page,
+        ], $options);
     }
 }

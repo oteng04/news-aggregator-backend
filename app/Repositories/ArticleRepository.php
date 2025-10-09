@@ -6,9 +6,28 @@ use App\Models\Article;
 use App\Repositories\Contracts\ArticleRepositoryInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class ArticleRepository implements ArticleRepositoryInterface
 {
+    /**
+     * Sanitize search query to prevent injection attacks and limit length
+     */
+    private function sanitizeSearchQuery(string $query): string
+    {
+        // Remove HTML tags and encode special characters
+        $sanitized = strip_tags($query);
+        $sanitized = htmlspecialchars($sanitized, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Remove potentially dangerous characters but keep spaces and alphanumeric
+        $sanitized = preg_replace('/[^\p{L}\p{N}\s\-]/u', '', $sanitized);
+
+        // Trim and limit length
+        $sanitized = trim($sanitized);
+        $sanitized = Str::limit($sanitized, 100, '');
+
+        return $sanitized;
+    }
     public function getAll(): Collection
     {
         return Article::with(['source', 'category', 'authors'])->get();
@@ -30,12 +49,18 @@ class ArticleRepository implements ArticleRepositoryInterface
 
     public function search(string $query, array $filters = []): LengthAwarePaginator
     {
+        $sanitizedQuery = $this->sanitizeSearchQuery($query);
+
+        if (empty($sanitizedQuery)) {
+            return new LengthAwarePaginator([], 0, 20);
+        }
+
         $articles = Article::with(['source', 'category', 'authors'])
-            // Search across title, description, and content fields
-            ->where(function ($q) use ($query) {
-                $q->where('title', 'like', "%{$query}%")
-                  ->orWhere('description', 'like', "%{$query}%")
-                  ->orWhere('content', 'like', "%{$query}%");
+            // Search across title, description, and content fields using parameterized queries
+            ->where(function ($q) use ($sanitizedQuery) {
+                $q->where('title', 'like', '%' . $sanitizedQuery . '%')
+                  ->orWhere('description', 'like', '%' . $sanitizedQuery . '%')
+                  ->orWhere('content', 'like', '%' . $sanitizedQuery . '%');
             });
 
         // Apply optional filters for source and category

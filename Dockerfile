@@ -22,6 +22,9 @@ WORKDIR /var/www/html
 
 COPY . .
 
+# Copy environment file
+RUN cp .env.example .env || true
+
 RUN composer install --no-dev --optimize-autoloader
 
 COPY docker/nginx/nginx.conf /etc/nginx/sites-available/default

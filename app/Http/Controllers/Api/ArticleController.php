@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ArticleIndexRequest;
+use App\Http\Requests\Api\ArticleSearchRequest;
+use App\Http\Resources\ApiResponse;
 use App\Repositories\Contracts\ArticleRepositoryInterface;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
@@ -13,21 +15,40 @@ class ArticleController extends Controller
         private ArticleRepositoryInterface $articleRepository
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ArticleIndexRequest $request): JsonResponse
     {
-        $perPage = $request->get('per_page', 20);
-        $articles = $this->articleRepository->getPaginated($perPage);
+        $validated = $request->validated();
 
-        return response()->json([
-            'success' => true,
-            'data' => $articles->items(),
-            'meta' => [
-                'current_page' => $articles->currentPage(),
-                'per_page' => $articles->perPage(),
-                'total' => $articles->total(),
-                'last_page' => $articles->lastPage(),
-            ]
-        ]);
+        // Build query filters
+        $filters = [];
+        if (isset($validated['source_id'])) {
+            $filters['source_id'] = $validated['source_id'];
+        }
+        if (isset($validated['category_id'])) {
+            $filters['category_id'] = $validated['category_id'];
+        }
+
+        // Get paginated articles with filters
+        if (!empty($filters)) {
+            $articles = $this->articleRepository->getPaginatedWithFilters(
+                $validated['per_page'],
+                $filters
+            );
+        } else {
+            $articles = $this->articleRepository->getPaginated($validated['per_page']);
+        }
+
+        // Add request metadata
+        $meta = [
+            'request_params' => [
+                'page' => $validated['page'],
+                'per_page' => $validated['per_page'],
+                'filters' => $filters,
+            ],
+            'execution_time' => round((microtime(true) - LARAVEL_START) * 1000, 2) . 'ms',
+        ];
+
+        return ApiResponse::paginated($articles, 'articles', $meta);
     }
 
     public function show(string $slug): JsonResponse
@@ -35,42 +56,34 @@ class ArticleController extends Controller
         $article = $this->articleRepository->findBySlug($slug);
 
         if (!$article) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Article not found'
-            ], 404);
+            return ApiResponse::notFound('Article', $slug);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $article
-        ]);
+        $meta = [
+            'execution_time' => round((microtime(true) - LARAVEL_START) * 1000, 2) . 'ms',
+        ];
+
+        return ApiResponse::success($article, 'Article retrieved successfully', $meta);
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(ArticleSearchRequest $request): JsonResponse
     {
-        $query = $request->get('q');
-        $filters = $request->only(['source_id', 'category_id']);
+        $searchParams = $request->getSearchParameters();
 
-        if (!$query) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Search query is required'
-            ], 400);
-        }
+        // Perform search using repository
+        $articles = $this->articleRepository->search(
+            $searchParams['query'],
+            $searchParams['filters']
+        );
 
-        // Search in title, description, and content with optional source/category filters
-        $articles = $this->articleRepository->search($query, $filters);
+        // Add search-specific metadata
+        $meta = [
+            'query' => $searchParams['query'],
+            'filters_applied' => array_filter($searchParams['filters']),
+            'execution_time' => round((microtime(true) - LARAVEL_START) * 1000, 2) . 'ms',
+            'search_engine' => 'database', // Could be 'elasticsearch' in future
+        ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $articles->items(),
-            'meta' => [
-                'current_page' => $articles->currentPage(),
-                'per_page' => $articles->perPage(),
-                'total' => $articles->total(),
-                'last_page' => $articles->lastPage(),
-            ]
-        ]);
+        return ApiResponse::paginated($articles, 'articles', $meta);
     }
 }

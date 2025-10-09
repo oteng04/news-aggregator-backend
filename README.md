@@ -1,8 +1,8 @@
-# News Aggregator Backend
+   # News Aggregator Backend
 
 A Laravel-based news aggregation system that integrates multiple news sources and provides a clean, scalable architecture for content management.
 
-## Features
+   ## Features
 
 - Multi-source news aggregation (NewsAPI, The Guardian, New York Times)
 - RESTful API with comprehensive endpoints
@@ -11,7 +11,7 @@ A Laravel-based news aggregation system that integrates multiple news sources an
 - Docker containerization for development and production
 - Clean architecture with repository pattern and service layer
 
-## Tech Stack
+   ## Tech Stack
 
 - Laravel 11.x
 - PHP 8.2
@@ -21,82 +21,239 @@ A Laravel-based news aggregation system that integrates multiple news sources an
 - Nginx (production)
 - Supervisor (production)
 
-## Setup Instructions
+## Quick Start
 
-### Prerequisites
-
+   ### Prerequisites
 - Docker and Docker Compose
-- Git
+   - Git
 
-### Development Setup
+### Development Setup (Step-by-Step)
 
-1. **Clone the repository**
+1. **Clone and enter the project**
    ```bash
    git clone https://github.com/oteng04/news-aggregator-backend.git
    cd news-aggregator-backend
    ```
 
-2. **Start the development environment**
+2. **Copy environment file**
+   ```bash
+   cp .env.example .env
+   ```
+   *Note: The `.env` file contains your database credentials and API keys*
+
+3. **Start all services (database, Redis, app)**
    ```bash
    docker compose up -d
    ```
+   *Wait for all containers to start. This may take 1-2 minutes.*
 
-3. **Install dependencies and setup database**
+4. **Install PHP dependencies**
    ```bash
    docker compose exec app composer install
+   ```
+
+5. **Generate application key**
+   ```bash
+   docker compose exec app php artisan key:generate
+   ```
+
+6. **Run database migrations**
+   ```bash
    docker compose exec app php artisan migrate
+   ```
+
+7. **Seed the database with sample data**
+   ```bash
    docker compose exec app php artisan db:seed
    ```
 
-4. **Create admin user**
+8. **Create admin user**
    ```bash
    docker compose exec app php artisan make:filament-user
    ```
+   *Follow the prompts to create your admin username and password*
 
-5. **Access the application**
-   - Application: http://localhost:8000
-   - Admin panel: http://localhost:8000/admin
-   - API documentation: http://localhost:8000/api/documentation
+9. **Start the Laravel development server**
+   ```bash
+   docker compose exec app php artisan serve --host=0.0.0.0 --port=8000
+   ```
+   *Keep this running in a separate terminal or run in background*
+
+10. **Access your application**
+    - **Main Application**: http://localhost:8000
+    - **Admin Dashboard**: http://localhost:8000/admin *(use the credentials from step 8)*
+    - **Queue Monitoring**: http://localhost:8000/horizon
+    - **Debug Monitoring**: http://localhost:8000/telescope *(only in debug mode)*
+    - **API Documentation**: http://localhost:8000/docs/api
+
+### Troubleshooting
+
+**If URLs don't work:**
+1. Make sure the Laravel server from step 9 is running
+2. Check container status: `docker compose ps`
+3. Check logs: `docker compose logs app`
+
+**If admin login doesn't work:**
+1. Make sure you completed step 8 (create admin user)
+2. Check that you have the correct username/password from the prompts
+
+## Getting Started with Your Application
+
+### After Setup - Useful Commands
+
+**Fetch news articles from all sources:**
+```bash
+# Development
+docker compose exec app php artisan news:fetch
+
+# Production
+docker compose -f docker-compose.prod.yml exec app php artisan news:fetch
+```
+
+**Start background queue processing:**
+```bash
+# Development
+docker compose exec app php artisan horizon
+
+# Production - Supervisor handles this automatically
+```
+
+**Clear application cache:**
+```bash
+docker compose exec app php artisan cache:clear
+docker compose exec app php artisan config:clear
+docker compose exec app php artisan route:clear
+docker compose exec app php artisan view:clear
+```
+
+**Check application health:**
+```bash
+# Health check endpoint
+curl http://localhost:8000/api/v1/health
+
+# View application stats
+curl http://localhost:8000/api/v1/stats
+```
+
+### Monitoring Your Application
+
+- **Admin Dashboard** (`/admin`): Manage articles, sources, categories, and authors
+- **Horizon** (`/horizon`): Monitor background job queues
+- **Telescope** (`/telescope`): Debug requests and performance (development only)
+- **API Docs** (`/docs/api`): Interactive API documentation
 
 ### Production Setup
 
-1. **Build and start production containers**
+1. **Update environment variables for production**
+   ```bash
+   # Edit .env file and set:
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=http://your-production-domain.com
+   ```
+
+2. **Build and start production containers**
    ```bash
    docker compose -f docker-compose.prod.yml up -d --build
    ```
+   *Note: Uses production Dockerfile with Nginx and Supervisor*
 
-2. **Run database migrations**
+3. **Run production setup**
    ```bash
    docker compose -f docker-compose.prod.yml exec app php artisan migrate
-   ```
-
-3. **Configure storage and caching**
-   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan db:seed
    docker compose -f docker-compose.prod.yml exec app php artisan storage:link
    docker compose -f docker-compose.prod.yml exec app php artisan config:cache
    docker compose -f docker-compose.prod.yml exec app php artisan route:cache
    docker compose -f docker-compose.prod.yml exec app php artisan view:cache
    ```
 
-4. **Access production application**
-   - Application: http://localhost
-   - Admin panel: http://localhost/admin
-   - Queue monitoring: http://localhost/horizon
+4. **Create production admin user**
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan make:filament-user
+   ```
 
-## API Endpoints
+5. **Start queue worker for background processing**
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan horizon
+   ```
+   *Or configure Supervisor to manage this automatically*
 
-### Articles
-- `GET /api/articles` - List articles with pagination and filtering
-- `GET /api/articles/{id}` - Get specific article
-- `GET /api/articles/search` - Search articles by query
-- `POST /api/articles` - Create new article (admin only)
-- `PUT /api/articles/{id}` - Update article (admin only)
-- `DELETE /api/articles/{id}` - Delete article (admin only)
+6. **Access production application**
+   - Application: `http://your-production-domain.com`
+   - Admin panel: `http://your-production-domain.com/admin`
+   - Queue monitoring: `http://your-production-domain.com/horizon`
+   - API documentation: `http://your-production-domain.com/docs/api`
 
-### Sources & Categories
-- `GET /api/sources` - List all news sources
-- `GET /api/categories` - List all categories
-- `GET /api/authors` - List all authors
+## Available Endpoints
+
+### Public API Endpoints
+
+All API endpoints are versioned under `/api/v1/` and include rate limiting.
+
+#### Articles
+- `GET /api/v1/articles` - List articles with pagination and filters (100 requests/minute)
+  - Query parameters: `page`, `per_page`, `source_id`, `category_id`, `search`
+- `GET /api/v1/articles/search` - Search articles by text query (30 requests/minute)
+  - Query parameters: `q` (required), `page`, `per_page`, `source_id`, `category_id`
+- `GET /api/v1/articles/{slug}` - Get specific article by URL slug (200 requests/minute)
+
+#### News Sources & Categories
+- `GET /api/v1/sources` - List all news sources (100 requests/minute)
+- `GET /api/v1/categories` - List all article categories (100 requests/minute)
+
+#### System Monitoring
+- `GET /api/v1/health` - System health check (no rate limit)
+- `GET /api/v1/stats` - Application statistics (200 requests/minute)
+- `GET /api/v1/metrics` - Detailed system metrics (200 requests/minute)
+
+### Administrative Interfaces
+
+These require authentication and are accessed through web browsers:
+
+- **Admin Dashboard**: `/admin` - Content management and system overview
+
+  ![Admin Dashboard Stats](screenshots/filament_stats.png)
+
+  ![Articles Management](screenshots/filament_articles.png)
+  ![Sources Management](screenshots/filament_sources.png)
+  ![Categories Management](screenshots/filament_categories.png)
+  ![Authors Management](screenshots/filament_authors.png)
+
+- **Queue Monitoring**: `/horizon` - Background job processing status
+
+  ![Horizon Queue Monitoring](screenshots/horizon.png)
+
+- **Debug Monitoring**: `/telescope` - Request debugging and performance monitoring
+
+  ![Telescope Debug Monitoring](screenshots/telescope.png)
+
+### API Documentation
+
+- **Interactive API Docs**: `/docs/api` - OpenAPI/Swagger documentation for all endpoints
+
+  ![API Documentation - Overview](screenshots/swagger_1.png)
+
+  ![API Documentation - Endpoints](screenshots/swagger_2.png)
+
+### API Usage Examples
+
+```bash
+# Get latest articles
+curl "http://localhost:8000/api/v1/articles"
+
+# Search for articles
+curl "http://localhost:8000/api/v1/articles/search?q=technology"
+
+# Get articles from specific source
+curl "http://localhost:8000/api/v1/articles?source_id=1"
+
+# Get specific article
+curl "http://localhost:8000/api/v1/articles/sample-article-slug"
+
+# Check system health
+curl "http://localhost:8000/api/v1/health"
+```
 
 ## Configuration
 
@@ -116,8 +273,8 @@ DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
 DB_DATABASE=news_aggregator_db
-DB_USERNAME=news_admin
-DB_PASSWORD=news_pass_04
+DB_USERNAME=your_db_username
+DB_PASSWORD=your_db_password
 
 # Redis
 REDIS_HOST=redis
@@ -214,13 +371,4 @@ Ensures consistent development and production environments.
 - Structured logging with context
 - Error tracking and reporting
 
-## Contributing
-
-1. Follow PSR-12 coding standards
-2. Write tests for new features
-3. Update documentation as needed
-4. Use meaningful commit messages
-
-## License
-
-This project is for educational and portfolio purposes.
+  

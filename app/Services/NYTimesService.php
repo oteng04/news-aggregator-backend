@@ -2,72 +2,40 @@
 
 namespace App\Services;
 
-use App\Services\Contracts\NewsSourceInterface;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Services\Normalizers\NYTimesNormalizer;
 
-class NYTimesService implements NewsSourceInterface
+class NYTimesService extends BaseNewsService
 {
-    private string $apiKey;
-    private string $baseUrl;
-
     public function __construct()
     {
-        $this->apiKey = config('news.providers.ny_times.api_key') ?? env('NYT_API_KEY');
-        $this->baseUrl = config('news.providers.ny_times.base_url') ?? env('NYTIMES_BASE_URL');
+        parent::__construct('ny_times');
     }
 
-    public function fetchArticles(int $page = 1, array $options = []): Collection
+    protected function createNormalizer()
     {
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/topstories/v2/home.json', [
-                'api-key' => $this->apiKey,
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['results'] ?? []);
-            }
-
-            Log::error('NYTimes API request failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('NYTimes API exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return new NYTimesNormalizer();
     }
 
-    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
+    protected function getFetchEndpoint(): string
     {
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl . '/search/v2/articlesearch.json', [
-                'api-key' => $this->apiKey,
-                'q' => $query,
-                'page' => $page,
-                'sort' => 'newest'
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return collect($data['response']['docs'] ?? []);
-            }
-
-            Log::error('NYTimes search failed', ['status' => $response->status()]);
-            return collect();
-        } catch (\Exception $e) {
-            Log::error('NYTimes search exception', ['message' => $e->getMessage()]);
-            return collect();
-        }
+        return $this->config['endpoints']['top_stories'];
     }
 
-    public function getSourceName(): string
+    protected function getSearchEndpoint(): string
     {
-        return 'New York Times';
+        return $this->config['endpoints']['search'];
     }
 
-    public function getApiIdentifier(): string
+    protected function getFetchParams(int $page, array $options): array
     {
-        return 'ny_times';
+        return array_merge($this->config['default_params'], $options);
+    }
+
+    protected function getSearchParams(string $query, int $page, array $options): array
+    {
+        return array_merge($this->config['default_params'], [
+            'q' => $query,
+            'page' => $page,
+        ], $options);
     }
 }
