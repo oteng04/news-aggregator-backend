@@ -1,123 +1,133 @@
 # News Aggregator Backend
 
-A production-ready Laravel-based news aggregation system that demonstrates enterprise-level development practices, clean architecture, and modern PHP development.
+A Laravel-based news aggregation system that integrates multiple news sources and provides a clean, scalable architecture for content management.
 
-## 🚀 Features
+## Features
 
-- **Multi-Source News Aggregation**: Integrates with NewsAPI, The Guardian, and New York Times
-- **Clean Architecture**: Repository pattern, service layer, and dependency injection
-- **Admin Dashboard**: Filament-powered admin interface with statistics widgets
-- **Queue Processing**: Laravel Horizon for background job processing
-- **RESTful API**: Comprehensive API endpoints with proper documentation
-- **Production Ready**: Docker containerization with nginx, supervisor, and optimized MySQL
+- Multi-source news aggregation (NewsAPI, The Guardian, New York Times)
+- RESTful API with comprehensive endpoints
+- Admin dashboard with Filament
+- Background queue processing with Laravel Horizon
+- Docker containerization for development and production
+- Clean architecture with repository pattern and service layer
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Laravel 11.x** - PHP framework
-- **PHP 8.2** - Server-side scripting
-- **MySQL 8.0** - Database
-- **Redis** - Caching and queues
-- **Docker & Docker Compose** - Containerization
-- **Nginx** - Web server
-- **Supervisor** - Process management
-- **Laravel Horizon** - Queue monitoring
-- **Filament 3.x** - Admin panel
+- Laravel 11.x
+- PHP 8.2
+- MySQL 8.0
+- Redis
+- Docker & Docker Compose
+- Nginx (production)
+- Supervisor (production)
 
-## 📁 Project Structure
+## Setup Instructions
 
-```
-├── app/
-│   ├── Services/           # News source services
-│   ├── Repositories/       # Data access layer
-│   ├── Filament/          # Admin panel resources
-│   └── Http/Controllers/  # API controllers
-├── config/                # Laravel configuration
-├── docker/                # Production container configs
-├── database/migrations/  # Database schema
-├── routes/               # API and web routes
-└── tests/               # Test suites
-```
+### Prerequisites
 
-## 🏃‍♂️ Quick Start
+- Docker and Docker Compose
+- Git
 
-### Development Environment
-```bash
-# Clone the repository
-git clone https://github.com/oteng04/news-aggregator-backend.git
-cd news-aggregator-backend
+### Development Setup
 
-# Start development environment
-docker compose up -d
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/oteng04/news-aggregator-backend.git
+   cd news-aggregator-backend
+   ```
 
-# Run database migrations
-docker compose exec app php artisan migrate
+2. **Start the development environment**
+   ```bash
+   docker compose up -d
+   ```
 
-# Create admin user
-docker compose exec app php artisan make:filament-user
-```
+3. **Install dependencies and setup database**
+   ```bash
+   docker compose exec app composer install
+   docker compose exec app php artisan migrate
+   docker compose exec app php artisan db:seed
+   ```
 
-### Production Environment
-```bash
-# Build and start production containers
-docker compose -f docker-compose.prod.yml up -d --build
+4. **Create admin user**
+   ```bash
+   docker compose exec app php artisan make:filament-user
+   ```
 
-# Run database migrations
-docker compose -f docker-compose.prod.yml exec app php artisan migrate
+5. **Access the application**
+   - Application: http://localhost:8000
+   - Admin panel: http://localhost:8000/admin
+   - API documentation: http://localhost:8000/api/documentation
 
-# Create storage link
-docker compose -f docker-compose.prod.yml exec app php artisan storage:link
-```
+### Production Setup
 
-## 🔗 API Endpoints
+1. **Build and start production containers**
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+2. **Run database migrations**
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan migrate
+   ```
+
+3. **Configure storage and caching**
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan storage:link
+   docker compose -f docker-compose.prod.yml exec app php artisan config:cache
+   docker compose -f docker-compose.prod.yml exec app php artisan route:cache
+   docker compose -f docker-compose.prod.yml exec app php artisan view:cache
+   ```
+
+4. **Access production application**
+   - Application: http://localhost
+   - Admin panel: http://localhost/admin
+   - Queue monitoring: http://localhost/horizon
+
+## API Endpoints
 
 ### Articles
-- `GET /api/articles` - List articles with pagination
+- `GET /api/articles` - List articles with pagination and filtering
 - `GET /api/articles/{id}` - Get specific article
-- `GET /api/articles/search` - Search articles
-- `POST /api/articles` - Create article (admin only)
+- `GET /api/articles/search` - Search articles by query
+- `POST /api/articles` - Create new article (admin only)
 - `PUT /api/articles/{id}` - Update article (admin only)
 - `DELETE /api/articles/{id}` - Delete article (admin only)
 
 ### Sources & Categories
-- `GET /api/sources` - List news sources
-- `GET /api/categories` - List categories
-- `GET /api/authors` - List authors
+- `GET /api/sources` - List all news sources
+- `GET /api/categories` - List all categories
+- `GET /api/authors` - List all authors
 
-## 👨‍💼 Admin Panel
-
-Access the admin dashboard at `/admin` to:
-- View dashboard statistics
-- Manage articles, sources, categories, and authors
-- Monitor queue jobs with Laravel Horizon
-- Configure news sources and API keys
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-docker compose exec app php artisan test
-
-# Run specific test suite
-docker compose exec app php artisan test --testsuite=Unit
-```
-
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_KEY=base64:your-generated-key
 
+Copy `.env.example` to `.env` and configure the following:
+
+```env
+APP_NAME="News Aggregator"
+APP_ENV=local
+APP_KEY=  # Generate with: php artisan key:generate
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# Database
 DB_CONNECTION=mysql
 DB_HOST=mysql
-DB_DATABASE=news_aggregator
-DB_USERNAME=news_user
-DB_PASSWORD=secure_password
+DB_PORT=3306
+DB_DATABASE=news_aggregator_db
+DB_USERNAME=news_admin
+DB_PASSWORD=news_pass_04
 
+# Redis
 REDIS_HOST=redis
-QUEUE_CONNECTION=redis
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Queue & Cache
 CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
 
 # News API Keys
 NEWSAPI_API_KEY=your_newsapi_key
@@ -125,62 +135,92 @@ GUARDIAN_API_KEY=your_guardian_key
 NYT_API_KEY=your_nyt_key
 ```
 
-## 📊 Monitoring
+## Project Structure
 
-- **Laravel Horizon**: `/horizon` - Queue job monitoring
-- **Laravel Telescope**: `/telescope` - Debug and monitoring (development only)
-- **Health Checks**: Built-in Laravel health monitoring
+```
+├── app/
+│   ├── Services/           # News source integration services
+│   ├── Repositories/       # Data access layer
+│   ├── Filament/          # Admin panel components
+│   └── Http/Controllers/  # API controllers
+├── config/                # Laravel configuration files
+├── database/
+│   ├── migrations/       # Database schema migrations
+│   └── seeders/         # Database seeders
+├── docker/               # Production container configurations
+├── routes/              # API and web routes
+├── tests/              # Test suites
+└── docker-compose.yml  # Development environment
+```
 
-## 🐳 Docker Architecture
+## Testing
 
-### Development
-- **Laravel Artisan Serve**: Port 8000
-- **MySQL**: Port 3306
-- **Redis**: Port 6379
+```bash
+# Run all tests
+docker compose exec app php artisan test
 
-### Production
-- **Nginx**: Port 80
-- **PHP-FPM**: Internal communication
-- **Supervisor**: Manages all processes
-- **Queue Workers**: Automatic background processing
+# Run specific test types
+docker compose exec app php artisan test --testsuite=Unit
+docker compose exec app php artisan test --testsuite=Feature
+```
 
-## 🎯 Key Highlights
+## Development Commands
 
-### Clean Code Principles
-- **SOLID Principles**: Single responsibility, open/closed, etc.
-- **Repository Pattern**: Clean data access abstraction
-- **Service Layer**: Business logic encapsulation
-- **Dependency Injection**: Proper IoC container usage
+```bash
+# Fetch news articles
+docker compose exec app php artisan news:fetch
 
-### Production Readiness
-- **Error Handling**: Comprehensive exception handling
-- **Logging**: Structured logging with context
-- **Caching**: Redis-based caching strategy
-- **Queue Processing**: Background job processing
-- **Security**: Input validation and sanitization
+# Clear cache
+docker compose exec app php artisan cache:clear
+docker compose exec app php artisan config:clear
 
-### Developer Experience
-- **Docker Development**: Consistent environment
-- **Laravel Horizon**: Visual queue monitoring
-- **Filament Admin**: Modern admin interface
-- **API Documentation**: Clear endpoint documentation
+# Run queue worker (development)
+docker compose exec app php artisan queue:work
+```
 
-## 📈 Performance Optimizations
+## Architecture Decisions
 
-- Database query optimization with eager loading
+### Repository Pattern
+Used for clean data access abstraction and testability.
+
+### Service Layer
+Business logic is encapsulated in service classes, keeping controllers thin.
+
+### Queue Processing
+News fetching is handled asynchronously to prevent timeouts and improve performance.
+
+### Docker Containerization
+Ensures consistent development and production environments.
+
+## Performance Considerations
+
 - Redis caching for frequently accessed data
-- Background queue processing for API calls
-- MySQL performance tuning
-- Composer autoloader optimization
+- Database query optimization with eager loading
+- Background processing for API calls
+- MySQL performance tuning for production
 
-## 🔒 Security Measures
+## Security
 
 - Input validation on all API endpoints
-- SQL injection prevention via Eloquent ORM
-- CSRF protection on forms
+- Rate limiting on public endpoints
+- CSRF protection on admin forms
 - Secure environment variable handling
-- Rate limiting on API endpoints
+- SQL injection prevention via Eloquent ORM
 
----
+## Monitoring
 
-**Built with Laravel 11.x, PHP 8.2, and modern development practices to demonstrate senior-level backend development skills.**
+- Laravel Horizon for queue monitoring
+- Laravel Telescope for debugging (development only)
+- Structured logging with context
+- Error tracking and reporting
+
+## Contributing
+
+1. Follow PSR-12 coding standards
+2. Write tests for new features
+3. Update documentation as needed
+4. Use meaningful commit messages
+
+## License
+
+This project is for educational and portfolio purposes.
