@@ -18,7 +18,7 @@ class NYTimesService implements NewsSourceInterface
         $this->baseUrl = config('news.providers.ny_times.base_url') ?? env('NYTIMES_BASE_URL');
     }
 
-    public function fetchArticles( int $page = 1): Collection
+    public function fetchArticles(int $page = 1, array $options = []): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/topstories/v2/home.json', [
@@ -38,7 +38,7 @@ class NYTimesService implements NewsSourceInterface
         }
     }
 
-    public function searchArticles(string $query, int $page = 1): Collection
+    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/search/v2/articlesearch.json', [

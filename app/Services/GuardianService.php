@@ -18,7 +18,7 @@ class GuardianService implements NewsSourceInterface
         $this->baseUrl = config('news.providers.guardian.base_url') ?? env('GUARDIAN_BASE_URL');
     }
 
-    public function fetchArticles(int $page = 1): Collection
+    public function fetchArticles(int $page = 1, array $options = []): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/search', [
@@ -43,7 +43,7 @@ class GuardianService implements NewsSourceInterface
         }
     }
 
-    public function searchArticles(string $query, int $page = 1): Collection
+    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/search', [

@@ -18,7 +18,7 @@ class NewsAPIService implements NewsSourceInterface
         $this->baseUrl = config('news.providers.news_api.base_url') ?? env('NEWSAPI_BASE_URL');
     }
 
-    public function fetchArticles(int $page = 1): Collection
+    public function fetchArticles(int $page = 1, array $options = []): Collection
     {
         try {
             // Using top-headlines endpoint to get current US news headlines
@@ -40,7 +40,7 @@ class NewsAPIService implements NewsSourceInterface
         }
     }
 
-    public function searchArticles(string $query, int $page = 1): Collection
+    public function searchArticles(string $query, int $page = 1, array $options = []): Collection
     {
         try {
             $response = Http::timeout(30)->get($this->baseUrl . '/everything', [

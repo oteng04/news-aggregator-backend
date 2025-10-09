@@ -117,6 +117,22 @@ class ArticleRepository implements ArticleRepositoryInterface
         return $query->paginate(20);
     }
 
+    public function getPaginatedWithFilters(int $perPage = 20, array $filters = []): LengthAwarePaginator
+    {
+        $query = Article::with(['source', 'category', 'authors'])
+            ->orderBy('published_at', 'desc');
+
+        if (isset($filters['source_id'])) {
+            $query->where('source_id', $filters['source_id']);
+        }
+
+        if (isset($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        return $query->paginate($perPage);
+    }
+
     public function updateOrCreate(array $attributes, array $data): object
     {
         return Article::updateOrCreate($attributes, $data);
