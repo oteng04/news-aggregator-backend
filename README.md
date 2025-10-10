@@ -51,27 +51,31 @@ A Laravel-based news aggregation system that integrates multiple news sources an
    ```bash
    docker compose exec app composer install
    ```
+   *Note: Requires containers to be running from step 3*
 
 5. **Generate application key**
    ```bash
    docker compose exec app php artisan key:generate
    ```
+   *Note: Requires containers to be running from step 3*
 
 6. **Run database migrations**
    ```bash
    docker compose exec app php artisan migrate
    ```
+   *Note: Requires containers to be running from step 3*
 
 7. **Seed the database with sample data**
    ```bash
    docker compose exec app php artisan db:seed
    ```
+   *Note: Requires containers to be running from step 3*
 
 8. **Create admin user**
    ```bash
    docker compose exec app php artisan make:filament-user
    ```
-   *Follow the prompts to create your admin username and password*
+   *Follow the prompts to create your admin username and password. Requires containers to be running from step 3*
 
 9. **Start the Laravel development server**
    ```bash
